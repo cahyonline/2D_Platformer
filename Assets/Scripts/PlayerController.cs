@@ -5,52 +5,51 @@ using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
-    private enum PlayerState { Idle, Running, Jumping }
-    
-    [SerializeField] private float moveSpeed = 5f;
-    [SerializeField] private float jumpForce = 300f;
-    private bool isGrounded = true;
-    private bool isDead = false;
-    private int idMove = 0;
-    private Rigidbody2D rb;
-    private Animator anim;
-    private PlayerState playerState = PlayerState.Idle;
+    bool isJump = false;
+    bool isDead = false;
+    int idMove = 0;
+    Animator anim;
+    int jumpCount = 0; 
+    public float moveSpeed = 5f;
+    public float jumpForce = 280f;
 
     private void Start()
     {
-        rb = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
     }
 
     void Update()
     {
-        if (isDead) return;
-
-        HandleInput();
-        UpdateAnimations();
-        CheckFall();
-    }
-
-    private void HandleInput()
-    {
         if (Input.GetKeyDown(KeyCode.LeftArrow))
+        {
             MoveLeft();
-        else if (Input.GetKeyDown(KeyCode.RightArrow))
+        }
+        if (Input.GetKeyDown(KeyCode.RightArrow))
+        {
             MoveRight();
-        else if (Input.GetKeyUp(KeyCode.LeftArrow) || Input.GetKeyUp(KeyCode.RightArrow))
-            Idle();
-
+        }
         if (Input.GetKeyDown(KeyCode.Space))
+        {
             Jump();
+        }
+        if (Input.GetKeyUp(KeyCode.RightArrow) || Input.GetKeyUp(KeyCode.LeftArrow))
+        {
+            Idle();
+        }
+        Move();
+        Dead();
     }
 
-    private void OnCollisionEnter2D(Collision2D collision)
+    private void OnCollisionStay2D(Collision2D collision)
     {
+        
         if (collision.gameObject.CompareTag("Ground"))
         {
-            isGrounded = true;
-            if (playerState != PlayerState.Running)
-                SetState(PlayerState.Idle);
+            Debug.Log("tanah");
+            anim.ResetTrigger("jump");
+            if (idMove == 0) anim.SetTrigger("idle");
+            isJump = false;
+            jumpCount = 0; 
         }
     }
 
@@ -58,67 +57,47 @@ public class PlayerController : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Ground"))
         {
-            isGrounded = false;
-            SetState(PlayerState.Jumping);
+            anim.SetTrigger("jump");
+            anim.ResetTrigger("run");
+            anim.ResetTrigger("idle");
+            isJump = true;
         }
     }
 
-    private void SetState(PlayerState state)
-    {
-        playerState = state;
-        anim.ResetTrigger("idle");
-        anim.ResetTrigger("run");
-        anim.ResetTrigger("jump");
-
-        switch (state)
-        {
-            case PlayerState.Idle:
-                anim.SetTrigger("idle");
-                break;
-            case PlayerState.Running:
-                anim.SetTrigger("run");
-                break;
-            case PlayerState.Jumping:
-                anim.SetTrigger("jump");
-                break;
-        }
-    }
-
-    private void MoveRight()
+    public void MoveRight()
     {
         idMove = 1;
-        SetState(PlayerState.Running);
     }
 
-    private void MoveLeft()
+    public void MoveLeft()
     {
-        idMove = -1;
-        SetState(PlayerState.Running);
+        idMove = 2;
     }
 
-    private void Idle()
+    private void Move()
     {
-        idMove = 0;
-        if (isGrounded)
-            SetState(PlayerState.Idle);
-    }
-
-    private void UpdateAnimations()
-    {
-        if (idMove != 0 && isGrounded)
+        if (idMove == 1 && !isDead)
         {
-            rb.velocity = new Vector2(idMove * moveSpeed, rb.velocity.y);
-            transform.localScale = new Vector3(idMove, 1f, 1f);
+            if (!isJump) anim.SetTrigger("run");
+            transform.Translate(Vector2.right * moveSpeed * Time.deltaTime);
+            transform.localScale = new Vector3(1f, 1f, 1f);
+        }
+        else if (idMove == 2 && !isDead)
+        {
+            if (!isJump) anim.SetTrigger("run");
+            transform.Translate(Vector2.left * moveSpeed * Time.deltaTime);
+            transform.localScale = new Vector3(-1f, 1f, 1f);
         }
     }
 
-    private void Jump()
+    public void Jump()
     {
-        if (isGrounded)
+        if (jumpCount < 1) 
         {
-            rb.AddForce(Vector2.up * jumpForce);
-            SetState(PlayerState.Jumping);
-            isGrounded = false;
+            gameObject.GetComponent<Rigidbody2D>().AddForce(Vector2.up * jumpForce);
+            anim.SetTrigger("jump");
+            jumpCount++;
+            isJump = true;
         }
     }
 
@@ -126,22 +105,29 @@ public class PlayerController : MonoBehaviour
     {
         if (collision.CompareTag("Coin"))
         {
-            // Tambah skor atau efek lainnya
             Destroy(collision.gameObject);
         }
     }
 
-    private void CheckFall()
+    public void Idle()
     {
-        if (transform.position.y < -20f)
+        if (!isJump)
         {
-            isDead = true;
-            RestartLevel();
+            anim.ResetTrigger("jump");
+            anim.ResetTrigger("run");
+            anim.SetTrigger("idle");
         }
+        idMove = 0;
     }
 
-    private void RestartLevel()
+    private void Dead()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        if (!isDead)
+        {
+            if (transform.position.y < -10f)
+            {
+                isDead = true;
+            }
+        }
     }
 }
