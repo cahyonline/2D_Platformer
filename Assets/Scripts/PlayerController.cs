@@ -20,6 +20,8 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        if (isDead) return;  // Stop any movement if the player is dead
+
         if (Input.GetKeyDown(KeyCode.LeftArrow))
         {
             MoveLeft();
@@ -37,15 +39,14 @@ public class PlayerController : MonoBehaviour
             Idle();
         }
         Move();
-        Dead();
+        CheckFall();
     }
 
     private void OnCollisionStay2D(Collision2D collision)
     {
-        
         if (collision.gameObject.CompareTag("Ground"))
         {
-            Debug.Log("tanah");
+            //Debug.Log("tanah");
             anim.ResetTrigger("jump");
             if (idMove == 0) anim.SetTrigger("idle");
             isJump = false;
@@ -107,6 +108,11 @@ public class PlayerController : MonoBehaviour
         {
             Destroy(collision.gameObject);
         }
+        else if (collision.CompareTag("water"))
+        {
+            Debug.Log("aer");
+            Die();
+        }
     }
 
     public void Idle()
@@ -120,14 +126,29 @@ public class PlayerController : MonoBehaviour
         idMove = 0;
     }
 
-    private void Dead()
+    private void CheckFall()
     {
-        if (!isDead)
+        if (transform.position.y < -30f && !isDead)
         {
-            if (transform.position.y < -10f)
-            {
-                isDead = true;
-            }
+            Die();
         }
     }
+
+    private void Die()
+{
+    isDead = true;
+    anim.SetTrigger("die"); // Trigger the dead animation
+
+    // Hentikan waktu
+    Time.timeScale = 0.5f; // Melambatkan waktu agar terlihat dramatis, bisa diubah sesuai kebutuhan
+
+    // Beri gaya dorong ke bawah agar karakter terlihat jatuh
+    Rigidbody2D rb = GetComponent<Rigidbody2D>();
+    rb.velocity = Vector2.zero; // Hentikan gerakan horizontal
+    rb.AddForce(Vector2.down * 200f); // Gaya dorong ke bawah, bisa disesuaikan
+
+    // Matikan collider agar tidak ada interaksi lagi saat mati
+    GetComponent<Collider2D>().enabled = false;
+}
+
 }
