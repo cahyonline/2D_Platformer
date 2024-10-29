@@ -7,6 +7,7 @@ TagManager:
   - Ground
   - water
   - Enemy
+  - Peluru
   layers:
   - Default
   - TransparentFX

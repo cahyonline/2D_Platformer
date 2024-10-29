@@ -5,23 +5,26 @@ using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
-    bool isJump = false;
+    bool isJump = true;
     bool isDead = false;
     int idMove = 0;
     Animator anim;
-    int jumpCount = 0; 
-    public float moveSpeed = 5f;
-    public float jumpForce = 280f;
+
+    public GameObject Projectile; // object peluru
+    public Vector2 projectileVelocity; // kecepatan peluru
+    public Vector2 projectileOffset; // jarak posisi peluru dari posisi player
+    public float cooldown = 0.5f; // jeda waktu untuk menembak
+    bool isCanShoot = true; // memastikan untuk kapan dapat menembak
 
     private void Start()
     {
         anim = GetComponent<Animator>();
+        isCanShoot = false;
+        EnemyController.EnemyKilled = 0;
     }
 
-    void Update()
+    private void Update()
     {
-        if (isDead) return;  // Stop any movement if the player is dead
-
         if (Input.GetKeyDown(KeyCode.LeftArrow))
         {
             MoveLeft();
@@ -34,35 +37,39 @@ public class PlayerController : MonoBehaviour
         {
             Jump();
         }
-        if (Input.GetKeyUp(KeyCode.RightArrow) || Input.GetKeyUp(KeyCode.LeftArrow))
+        if (Input.GetKeyUp(KeyCode.RightArrow))
         {
             Idle();
         }
+        if (Input.GetKeyUp(KeyCode.LeftArrow))
+        {
+            Idle();
+        }
+
+        if (Input.GetKeyDown(KeyCode.Z))
+        {
+            Fire();
+        }
         Move();
-        CheckFall();
+        Dead();
     }
 
     private void OnCollisionStay2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Ground"))
+        if (isJump)
         {
-            //Debug.Log("tanah");
             anim.ResetTrigger("jump");
             if (idMove == 0) anim.SetTrigger("idle");
             isJump = false;
-            jumpCount = 0; 
         }
     }
 
     private void OnCollisionExit2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Ground"))
-        {
-            anim.SetTrigger("jump");
-            anim.ResetTrigger("run");
-            anim.ResetTrigger("idle");
-            isJump = true;
-        }
+        anim.SetTrigger("jump");
+        anim.ResetTrigger("run");
+        anim.ResetTrigger("idle");
+        isJump = true;
     }
 
     public void MoveRight()
@@ -80,38 +87,44 @@ public class PlayerController : MonoBehaviour
         if (idMove == 1 && !isDead)
         {
             if (!isJump) anim.SetTrigger("run");
-            transform.Translate(Vector2.right * moveSpeed * Time.deltaTime);
-            transform.localScale = new Vector3(1f, 1f, 1f);
+            transform.Translate(1 * Time.deltaTime * 5f, 0, 0);
+            transform.localScale = new Vector3(-1f, 1f, 1f);
         }
-        else if (idMove == 2 && !isDead)
+        if (idMove == 2 && !isDead)
         {
             if (!isJump) anim.SetTrigger("run");
-            transform.Translate(Vector2.left * moveSpeed * Time.deltaTime);
-            transform.localScale = new Vector3(-1f, 1f, 1f);
+            transform.Translate(-1 * Time.deltaTime * 5f, 0, 0);
+            transform.localScale = new Vector3(1f, 1f, 1f);
         }
     }
 
     public void Jump()
     {
-        if (jumpCount < 1) 
+        if (!isJump)
         {
-            gameObject.GetComponent<Rigidbody2D>().AddForce(Vector2.up * jumpForce);
-            anim.SetTrigger("jump");
-            jumpCount++;
-            isJump = true;
+            gameObject.GetComponent<Rigidbody2D>().AddForce(Vector2.up * 300f);
         }
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.CompareTag("Coin"))
+        if (collision.transform.tag.Equals("Coin"))
         {
+            Data.score += 15;
             Destroy(collision.gameObject);
         }
-        else if (collision.CompareTag("water"))
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.transform.tag.Equals("Peluru"))
         {
-            Debug.Log("aer");
-            Die();
+            isCanShoot = true;
+        }
+        if (collision.transform.tag.Equals("Enemy"))
+        {
+            SceneManager.LoadScene("Game Over");
+            isDead = true;
         }
     }
 
@@ -126,29 +139,38 @@ public class PlayerController : MonoBehaviour
         idMove = 0;
     }
 
-    private void CheckFall()
+    private void Dead()
     {
-        if (transform.position.y < -30f && !isDead)
+        if (!isDead)
         {
-            Die();
+            if (transform.position.y < -10f)
+            {
+                isDead = true;
+            }
         }
     }
 
-    private void Die()
-{
-    isDead = true;
-    anim.SetTrigger("die"); // Trigger the dead animation
+    void Fire()
+    {
+        if (isCanShoot)
+        {
+            GameObject bullet = Instantiate(Projectile, (Vector2)transform.position + projectileOffset * transform.localScale.x, Quaternion.identity);
 
-    // Hentikan waktu
-    Time.timeScale = 0.5f; // Melambatkan waktu agar terlihat dramatis, bisa diubah sesuai kebutuhan
+            Vector2 velocity = new Vector2(projectileVelocity.x * transform.localScale.x, projectileVelocity.y);
+            bullet.GetComponent<Rigidbody2D>().velocity = velocity;
 
-    // Beri gaya dorong ke bawah agar karakter terlihat jatuh
-    Rigidbody2D rb = GetComponent<Rigidbody2D>();
-    rb.velocity = Vector2.zero; // Hentikan gerakan horizontal
-    rb.AddForce(Vector2.down * 200f); // Gaya dorong ke bawah, bisa disesuaikan
+            Vector3 scale = transform.localScale;
+            bullet.transform.localScale = scale;
 
-    // Matikan collider agar tidak ada interaksi lagi saat mati
-    GetComponent<Collider2D>().enabled = false;
-}
+            anim.SetTrigger("shoot"); // Panggil animasi menembak
+            StartCoroutine(CanShoot()); // Mulai cooldown
+        }
+    }
 
+    IEnumerator CanShoot()
+    {
+        isCanShoot = false;
+        yield return new WaitForSeconds(cooldown);
+        isCanShoot = true;
+    }
 }

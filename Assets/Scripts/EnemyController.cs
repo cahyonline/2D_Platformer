@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class EnemyController : MonoBehaviour
 {
@@ -9,6 +10,17 @@ public class EnemyController : MonoBehaviour
     public Transform batas1;
     public Transform batas2;
     float speed = 2;
+    Rigidbody2D rigid;
+    Animator anim;
+    public int HP = 1;
+    bool isDie = false;
+    public static int EnemyKilled = 0;
+
+    void Start()
+    {
+        anim = GetComponent<Animator>();
+        rigid = GetComponent<Rigidbody2D>();
+    }
 
     void OnCollisionEnter2D(Collision2D col)
     {
@@ -36,7 +48,7 @@ public class EnemyController : MonoBehaviour
 
     void Update()
     {
-        if (isGrounded)
+        if (isGrounded && !isDie)
         {
             if (isFacingRight)
                 MoveRight();
@@ -70,5 +82,27 @@ public class EnemyController : MonoBehaviour
         theScale.x *= -1;
         transform.localScale = theScale;
         isFacingRight = !isFacingRight;
+    }
+
+    public void TakeDamage(int damage)
+    {
+        if (isDie) return; // Tambahkan pengecekan agar tidak mati berulang kali
+
+        HP -= damage;
+
+        if (HP <= 0)
+        {
+            isDie = true;
+            rigid.velocity = Vector2.zero;
+            anim.SetBool("IsDie", true);
+            Destroy(gameObject, 2);
+            Data.score += 20;
+            EnemyKilled++;
+
+            if (EnemyKilled == 3)
+            {
+                SceneManager.LoadScene("Game Over");
+            }
+        }
     }
 }
