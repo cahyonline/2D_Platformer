@@ -9,13 +9,18 @@ public class PlayerController : MonoBehaviour
     bool isDead = false;
     int idMove = 0;
     Animator anim;
+    public float moveSpeed;
 
-    public GameObject Projectile; // object peluru
-    public Vector2 projectileVelocity; // kecepatan peluru
-    public Vector2 projectileOffset; // jarak posisi peluru dari posisi player
-    public float cooldown = 0.5f; // jeda waktu untuk menembak
-    bool isCanShoot = true; // memastikan untuk kapan dapat menembak
+    public GameObject Projectile; 
+    public Vector2 projectileVelocity;
+    public Vector2 projectileOffset; 
+    public float cooldown = 0.5f;
+    bool isCanShoot = true;
 
+    
+    bool isGrounded; 
+    int jumpCount = 0; 
+    public int maxJumpCount = 1; 
     private void Start()
     {
         anim = GetComponent<Animator>();
@@ -48,6 +53,7 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Z))
         {
+            Debug.Log("Z");
             Fire();
         }
         Move();
@@ -56,20 +62,23 @@ public class PlayerController : MonoBehaviour
 
     private void OnCollisionStay2D(Collision2D collision)
     {
-        if (isJump)
+        if (collision.gameObject.CompareTag("Ground")) 
         {
+            //isGrounded = true; 
             anim.ResetTrigger("jump");
             if (idMove == 0) anim.SetTrigger("idle");
             isJump = false;
+            jumpCount = 0; 
         }
     }
 
     private void OnCollisionExit2D(Collision2D collision)
     {
-        anim.SetTrigger("jump");
-        anim.ResetTrigger("run");
-        anim.ResetTrigger("idle");
-        isJump = true;
+        if (collision.gameObject.CompareTag("Ground")) 
+        {
+            isGrounded = false; 
+            isJump = true; 
+        }
     }
 
     public void MoveRight()
@@ -87,22 +96,30 @@ public class PlayerController : MonoBehaviour
         if (idMove == 1 && !isDead)
         {
             if (!isJump) anim.SetTrigger("run");
-            transform.Translate(1 * Time.deltaTime * 5f, 0, 0);
-            transform.localScale = new Vector3(-1f, 1f, 1f);
+            transform.Translate(Vector2.right * moveSpeed * Time.deltaTime);
+            if (transform.localScale.x < 0) 
+            {
+                transform.localScale = new Vector3(Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
+            }
         }
-        if (idMove == 2 && !isDead)
+        else if (idMove == 2 && !isDead)
         {
             if (!isJump) anim.SetTrigger("run");
-            transform.Translate(-1 * Time.deltaTime * 5f, 0, 0);
-            transform.localScale = new Vector3(1f, 1f, 1f);
+            transform.Translate(Vector2.left * moveSpeed * Time.deltaTime);
+            if (transform.localScale.x > 0) 
+            {
+                transform.localScale = new Vector3(-Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
+            }
         }
     }
 
     public void Jump()
     {
-        if (!isJump)
+        if (isGrounded || jumpCount < maxJumpCount) 
         {
+            anim.SetTrigger("jump");
             gameObject.GetComponent<Rigidbody2D>().AddForce(Vector2.up * 300f);
+            jumpCount++; 
         }
     }
 
@@ -117,15 +134,20 @@ public class PlayerController : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.transform.tag.Equals("Peluru"))
+        if (collision.transform.CompareTag("Ground")){
+            isGrounded = true;
+        }
+        if (collision.transform.CompareTag("Peluru"))
         {
             isCanShoot = true;
         }
-        if (collision.transform.tag.Equals("Enemy"))
+        if (collision.transform.CompareTag("Enemy") || collision.transform.CompareTag("water"))
         {
-            SceneManager.LoadScene("Game Over");
+            Debug.Log("Karakter terkena musuh atau air!");
             isDead = true;
+            SceneManager.LoadScene("Game Over");
         }
+
     }
 
     public void Idle()
@@ -162,7 +184,7 @@ public class PlayerController : MonoBehaviour
             Vector3 scale = transform.localScale;
             bullet.transform.localScale = scale;
 
-            anim.SetTrigger("shoot"); // Panggil animasi menembak
+            anim.SetTrigger("shoot"); 
             StartCoroutine(CanShoot()); // Mulai cooldown
         }
     }

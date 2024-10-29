@@ -9,7 +9,7 @@ public class EnemyController : MonoBehaviour
     public bool isFacingRight = false;
     public Transform batas1;
     public Transform batas2;
-    float speed = 2;
+    float speed = 02f;
     Rigidbody2D rigid;
     Animator anim;
     public int HP = 1;
@@ -26,6 +26,7 @@ public class EnemyController : MonoBehaviour
     {
         if (col.gameObject.CompareTag("Ground"))
         {
+            Debug.Log("ground");
             isGrounded = true;
         }
     }
@@ -34,6 +35,7 @@ public class EnemyController : MonoBehaviour
     {
         if (col.gameObject.CompareTag("Ground"))
         {
+            Debug.Log("notground");
             isGrounded = false;
         }
     }
@@ -51,22 +53,40 @@ public class EnemyController : MonoBehaviour
         if (isGrounded && !isDie)
         {
             if (isFacingRight)
+            {
+                Debug.Log("Moving right");
                 MoveRight();
+            }
             else
+            {
+                Debug.Log("Moving left");
                 MoveLeft();
+            }
 
             if (transform.position.x >= batas2.position.x && isFacingRight)
+            {
+                Debug.Log("Reached batas2, flipping direction");
                 Flip();
+                isFacingRight = false;
+            }
             else if (transform.position.x <= batas1.position.x && !isFacingRight)
+            {
+                Debug.Log("Reached batas1, flipping direction");
                 Flip();
+                isFacingRight = true;
+            }
         }
     }
+
 
     void MoveRight()
     {
         Vector3 pos = transform.position;
         pos.x += speed * Time.deltaTime;
         transform.position = pos;
+        if (!isFacingRight){
+            Flip();
+        }
     }
 
     void MoveLeft()
@@ -74,6 +94,9 @@ public class EnemyController : MonoBehaviour
         Vector3 pos = transform.position;
         pos.x -= speed * Time.deltaTime;
         transform.position = pos;
+        if (isFacingRight){
+            Flip();
+        }
     }
 
     void Flip()
@@ -81,7 +104,6 @@ public class EnemyController : MonoBehaviour
         Vector3 theScale = transform.localScale;
         theScale.x *= -1;
         transform.localScale = theScale;
-        isFacingRight = !isFacingRight;
     }
 
     public void TakeDamage(int damage)

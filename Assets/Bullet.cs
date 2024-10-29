@@ -14,14 +14,15 @@ public class Bullet : MonoBehaviour
         
     }
 
-    void OnClollisionEnter2D(Collision2D col ) 
+    void OnTriggerEnter2D(Collider2D col)
     {
         if (col.gameObject.CompareTag("Player") && col.gameObject.CompareTag("Ground"))
         Destroy(this.gameObject);
 
         if (col.gameObject.CompareTag("Enemy")){
             col.gameObject.SendMessage("TakeDamage", 1);
+            Destroy(this.gameObject);
         }
-        Destroy(this.gameObject);
+        
     }
 }
