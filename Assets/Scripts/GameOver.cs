@@ -16,7 +16,7 @@ public class GameOver : MonoBehaviour
             PlayerPrefs. SetInt("HS", highscore);
         }
         else if (EnemyController.EnemyKilled == 3){
-            SceneManager.LoadScene("Congratulation");
+            SceneManager.LoadScene("Congratulations");
         }
         txHighScore.text ="Highscores: " + highscore;
         txScore.text = "Scores: " + Data.score;

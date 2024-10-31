@@ -24,7 +24,7 @@ public class PlayerController : MonoBehaviour
     private void Start()
     {
         anim = GetComponent<Animator>();
-        isCanShoot = false;
+        isCanShoot = true;
         EnemyController.EnemyKilled = 0;
     }
 
@@ -51,10 +51,10 @@ public class PlayerController : MonoBehaviour
             Idle();
         }
 
-        if (Input.GetKeyDown(KeyCode.Z))
+        //if (Input.GetKeyDown(KeyCode.Z))
         {
-            Debug.Log("Z");
-            Fire();
+            //Debug.Log("Z");
+            //Fire();
         }
         Move();
         Dead();
@@ -62,7 +62,7 @@ public class PlayerController : MonoBehaviour
 
     private void OnCollisionStay2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Ground")) 
+        if (isJump || collision.gameObject.CompareTag("Ground")) 
         {
             //isGrounded = true; 
             anim.ResetTrigger("jump");
@@ -176,21 +176,22 @@ public class PlayerController : MonoBehaviour
     {
         if (isCanShoot)
         {
-            GameObject bullet = Instantiate(Projectile, (Vector2)transform.position + projectileOffset * transform.localScale.x, Quaternion.identity);
+            GameObject bullet = Instantiate(Projectile, (Vector2)transform.position - projectileOffset * transform.localScale.x, Quaternion.identity);
 
             Vector2 velocity = new Vector2(projectileVelocity.x * transform.localScale.x, projectileVelocity.y);
-            bullet.GetComponent<Rigidbody2D>().velocity = velocity;
+            bullet.GetComponent<Rigidbody2D>().velocity = velocity * -1;
 
             Vector3 scale = transform.localScale;
-            bullet.transform.localScale = scale;
+            bullet.transform.localScale = scale * -1;
 
-            anim.SetTrigger("shoot"); 
             StartCoroutine(CanShoot()); // Mulai cooldown
+            anim.SetTrigger("shoot"); 
         }
     }
 
     IEnumerator CanShoot()
     {
+        anim.SetTrigger("shoot");
         isCanShoot = false;
         yield return new WaitForSeconds(cooldown);
         isCanShoot = true;
